@@ -1,0 +1,32 @@
+# 密钥 & 环境
+.env
+*.key
+*.pem
+secrets.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# 运行时数据
+server.log
+server.err
+*.db
+*.db-wal
+*.db-shm
+
+# 上传/调试残留
+check_*.py
+check_*.js
+test_paste*.png
+test_paste*.jpg
+frontend/  # 早期残留,不属于本项目

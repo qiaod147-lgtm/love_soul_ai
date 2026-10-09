@@ -1,0 +1,7 @@
+# 核心依赖
+openai>=1.30.0
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+
+# ponytail: sqlite3 / pathlib / re 都是 stdlib,不用列

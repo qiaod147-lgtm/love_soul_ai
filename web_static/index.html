@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Love Soul AI · 恋爱关系导师</title>
+<style>
+  :root {
+    --bg: #faf7f2;
+    --panel: #ffffff;
+    --ink: #2b2620;
+    --muted: #8a7f72;
+    --line: #ece5da;
+    --accent: #c75a4a;
+    --accent-soft: #f5e3df;
+    --me: #f0e7d8;
+    --ai: #ffffff;
+    --danger: #b03a2e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif; }
+  .app { display: grid; grid-template-columns: 260px 1fr; height: 100vh; }
+  .side { background: var(--panel); border-right: 1px solid var(--line); padding: 18px; overflow-y: auto; }
+  .side h1 { font-size: 18px; margin: 0 0 4px; color: var(--accent); }
+  .side .tag { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+  .side button { width: 100%; padding: 10px 12px; background: var(--accent); color: #fff; border: 0;
+    border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .side button.secondary { background: var(--panel); color: var(--ink); border: 1px solid var(--line); margin-top: 8px; }
+  .side button:hover { opacity: 0.92; }
+  .stats { margin-top: 18px; padding: 10px; background: #fbf5ec; border-radius: 8px;
+    font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .main { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; }
+  .topbar { display: flex; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--line);
+    background: var(--panel); align-items: center; }
+  .topbar input { flex: 1; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px;
+    font-size: 13px; background: #fafaf7; }
+  .topbar button { padding: 8px 14px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .stream { padding: 24px; overflow-y: auto; }
+  .msg { max-width: 760px; margin: 0 auto 16px; padding: 12px 16px; border-radius: 12px;
+    line-height: 1.65; white-space: pre-wrap; word-break: break-word; font-size: 15px; }
+  .msg.me { background: var(--me); }
+  .msg.ai { background: var(--ai); border: 1px solid var(--line); }
+  .msg .who { font-size: 11px; color: var(--muted); margin-bottom: 4px; letter-spacing: 0.5px; }
+  .msg.ai.danger { border-color: var(--danger); background: #fdf0ee; }
+  .composer { display: flex; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--line);
+    background: var(--panel); }
+  .composer textarea { flex: 1; min-height: 44px; max-height: 200px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 8px; font-size: 15px; resize: vertical;
+    font-family: inherit; background: #fafaf7; }
+  .composer button { padding: 0 22px; background: var(--accent); color: #fff; border: 0;
+    border-radius: 8px; cursor: pointer; font-size: 15px; }
+  .composer button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 10; }
+  .modal.open { display: flex; }
+  .modal .panel { background: var(--panel); border-radius: 12px; padding: 22px; width: min(720px, 92vw);
+    max-height: 86vh; overflow-y: auto; }
+  .modal h2 { margin: 0 0 12px; font-size: 18px; color: var(--accent); }
+  .modal label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 6px; }
+  .modal textarea, .modal input[type=text] { width: 100%; padding: 8px 10px; border: 1px solid var(--line);
+    border-radius: 6px; font-size: 14px; font-family: inherit; }
+  .modal .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .modal button { padding: 8px 16px; border: 0; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  .modal button.primary { background: var(--accent); color: #fff; }
+  .modal button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .empty { text-align: center; color: var(--muted); padding: 60px 20px; font-size: 14px; }
+  .empty h2 { color: var(--accent); margin-bottom: 8px; }
+  .badge { display: inline-block; padding: 2px 8px; background: var(--accent-soft); color: var(--accent);
+    border-radius: 10px; font-size: 11px; margin-left: 6px; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px;
+    background: var(--accent-soft); color: var(--accent); cursor: pointer; }
+  .hit { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px;
+    font-size: 13px; line-height: 1.5; }
+  .hit .meta { color: var(--muted); font-size: 11px; margin-bottom: 2px; }
+  @media (max-width: 720px) {
+    .app { grid-template-columns: 1fr; }
+    .side { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <h1>Love Soul AI</h1>
+    <div class="tag">你的恋爱关系导师</div>
+    <button onclick="openUpload()">📎 上传聊天记录</button>
+    <button class="secondary" onclick="openSearch()">🔍 搜索历史</button>
+    <button class="secondary" onclick="openHistory()">📜 查看历史</button>
+    <button class="secondary" onclick="doClear()">🗑 清空历史</button>
+    <div class="stats" id="stats">加载中...</div>
+  </aside>
+  <section class="main">
+    <div class="topbar">
+      <input id="userId" value="default" placeholder="用户标识" />
+      <button onclick="refreshAll()">刷新</button>
+    </div>
+    <div class="stream" id="stream">
+      <div class="empty">
+        <h2>开始对话</h2>
+        <p>直接输入你想说的,或点击左侧"上传聊天记录"做关系分析</p>
+      </div>
+    </div>
+    <div class="composer">
+      <div id="pendingThumbs" class="pending-thumbs" style="display:none;"></div>
+      <textarea id="input" placeholder="说说你的困扰…(Enter 发送,Shift+Enter 换行,可直接粘贴截图)"
+        onkeydown="onComposerKey(event)" onpaste="onInputPaste(event)"></textarea>
+      <button id="sendBtn" onclick="send()">发送</button>
+    </div>
+  </section>
+</div>
+
+<div class="modal" id="uploadModal">
+  <div class="panel">
+    <h2>上传聊天记录分析</h2>
+    <label>聊天记录(支持微信/QQ/iMessage 常见格式,例如: 10:23 张三: 你好)</label>
+    <textarea id="upText" rows="8" placeholder="10:23 张三: 今天好累
+10:24 李四: 怎么啦?
+..."></textarea>
+    <div id="upParsedHint" style="display:none;font-size:12px;color:var(--accent);margin:6px 0;"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <label>我是谁(必填,选识别出的说话人)</label>
+        <select id="upMe" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:14px;">
+          <option value="">(先粘贴聊天记录)</option>
+        </select>
+      </div>
+      <div>
+        <label>补充说明(可选)</label>
+        <input type="text" id="upNote" placeholder="例如: 在一起 2 年,最近常吵架" />
+      </div>
+    </div>
+
+    <label>聊天截图(可选,可拖多张,会自动识别图片内容)</label>
+    <input type="file" id="upImages" accept="image/jpeg,image/png,image/gif,image/webp" multiple
+      style="width:100%;padding:6px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fafaf7;" />
+    <div id="upThumbs" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
+
+    <label>分析模式</label>
+    <select id="upMode" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:14px;">
+      <option value="1">沟通建议 —— 给我下一步回复建议</option>
+      <option value="2">关系复盘 —— 分析这段对话发生了什么</option>
+      <option value="3">自定义问题</option>
+    </select>
+
+    <label id="upCustomLabel" style="display:none;">自定义问题</label>
+    <textarea id="upCustom" rows="3" style="display:none;" placeholder="你想让 AI 怎么分析?"></textarea>
+
+    <label>长记录切段(防止上下文爆掉)</label>
+    <select id="upChunk" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:14px;">
+      <option value="none">不切段(整段分析,适合 < 80 条)</option>
+      <option value="message">按消息数切(每 80 条一段)</option>
+      <option value="time">按时间间隔切(>30 分钟视为新会话)</option>
+    </select>
+
+    <label style="display:flex;align-items:center;gap:6px;margin-top:14px;font-size:13px;color:var(--ink);">
+      <input type="checkbox" id="upSave" /> 把分析结果保存到历史
+    </label>
+    <div class="row">
+      <button class="ghost" onclick="closeUpload()">取消</button>
+      <button class="primary" onclick="doUpload()">分析</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="searchModal">
+  <div class="panel">
+    <h2>跨历史搜索</h2>
+    <label>关键词</label>
+    <input type="text" id="searchKw" placeholder="例如: 分手、控制、约会" />
+    <div id="searchResults" style="margin-top:14px;"></div>
+    <div class="row">
+      <button class="ghost" onclick="closeSearch()">关闭</button>
+      <button class="primary" onclick="doSearch()">搜索</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="historyModal">
+  <div class="panel">
+    <h2>历史消息</h2>
+    <div id="historyList" style="margin-top:14px;max-height:60vh;overflow-y:auto;"></div>
+    <div class="row">
+      <button class="ghost" onclick="closeHistory()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+let isSending = false;
+
+async function api(path, body) {
+  const r = await fetch(path, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body || {}),
+  });
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(t || r.statusText);
+  }
+  return r.json();
+}
+
+function onComposerKey(e) {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
+}
+
+function userId() { return $("userId").value.trim() || "default"; }
+
+function appendMsg(role, content, images) {
+  const empty = $("stream").querySelector(".empty");
+  if (empty) empty.remove();
+  const wrap = document.createElement("div");
+  wrap.className = "msg " + (role === "user" ? "me" : "ai");
+  if (role === "assistant" && /(控制|暴力|pua|煤气灯|操纵|威胁)/i.test(content)) {
+    wrap.classList.add("danger");
+  }
+  const who = document.createElement("div");
+  who.className = "who";
+  who.textContent = role === "user" ? "你" : "Love Soul AI";
+  wrap.appendChild(who);
+  // ponytail: 历史里把图也展示出来(data URI 直接 <img>)
+  if (images && images.length) {
+    const gallery = document.createElement("div");
+    gallery.className = "msg-imgs";
+    gallery.style.cssText = "display:flex;flex-wrap:wrap;gap:4px;margin:4px 0;";
+    for (const im of images) {
+      const img = document.createElement("img");
+      img.src = im.data_uri;
+      img.style.cssText = "max-width:160px;max-height:160px;border-radius:6px;";
+      gallery.appendChild(img);
+    }
+    wrap.appendChild(gallery);
+  }
+  const body = document.createElement("div");
+  body.textContent = content;
+  wrap.appendChild(body);
+  $("stream").appendChild(wrap);
+  $("stream").scrollTop = $("stream").scrollHeight;
+  return wrap;
+}
+
+async function send() {
+  if (isSending) return;
+  const input = $("input");
+  const msg = input.value.trim();
+  const imgs = pendingImages.slice();
+  if (!msg && !imgs.length) return;
+  input.value = "";
+  pendingImages = [];
+  refreshPendingThumbs();
+  isSending = true;
+  $("sendBtn").disabled = true;
+  const display = msg + (imgs.length ? ` [📷×${imgs.length}]` : "");
+  // ponytail: 刚发的消息也带图(URL.createObjectURL 即时预览,data URI 入库后历史重渲也是 base64)
+  const previewImages = imgs.map((f) => ({data_uri: URL.createObjectURL(f), ct: f.type, name: f.name || "pasted"}));
+  appendMsg("user", display, previewImages);
+  try {
+    // ponytail: 统一 FormData,后端 /api/chat 现在只接 Form(有图无图都走 multipart)
+    const fd = new FormData();
+    fd.append("message", msg);
+    fd.append("user_id", userId());
+    for (const f of imgs) fd.append("images", f);
+    const resp = await fetch("/api/chat", { method: "POST", body: fd });
+    if (!resp.ok) throw new Error(await resp.text());
+    r = await resp.json();
+    appendMsg("assistant", r.reply);
+    refreshStats();
+  } catch (e) {
+    appendMsg("assistant", "[错误] " + e.message);
+  } finally {
+    isSending = false;
+    $("sendBtn").disabled = false;
+  }
+}
+
+let parsedSpeakers = [];
+
+function openUpload() {
+  $("uploadModal").classList.add("open");
+  $("upMode").onchange = () => {
+    const show = $("upMode").value === "3";
+    $("upCustom").style.display = show ? "block" : "none";
+    $("upCustomLabel").style.display = show ? "block" : "none";
+  };
+  // ponytail: 输入框粘贴图片 → 把图灌进 upImages,直接走现有 doUpload 流程,零新容器
+  $("upText").oninput = () => refreshSpeakers();
+  $("upImages").onchange = () => refreshThumbs();
+  $("upThumbs").innerHTML = "";
+  $("upImages").value = "";
+}
+// ponytail: 输入框粘贴图片 → 存到 pendingImages,显示缩略图,跟文字一起发(走 /api/chat)
+let pendingImages = [];
+function onInputPaste(e) {
+  if (!e.clipboardData) return;
+  const imgs = [];
+  for (const item of e.clipboardData.items) {
+    if (item.kind === "file" && item.type.startsWith("image/")) {
+      imgs.push(item.getAsFile());
+    }
+  }
+  if (!imgs.length) return; // 纯文字粘贴,放行
+  e.preventDefault();
+  for (const f of imgs) pendingImages.push(f);
+  refreshPendingThumbs();
+}
+function refreshPendingThumbs() {
+  const out = $("pendingThumbs");
+  if (!pendingImages.length) { out.style.display = "none"; out.innerHTML = ""; return; }
+  out.style.display = "flex";
+  out.innerHTML = "";
+  for (let i = 0; i < pendingImages.length; i++) {
+    const url = URL.createObjectURL(pendingImages[i]);
+    const wrap = document.createElement("div");
+    wrap.style.cssText = "position:relative;width:60px;height:60px;border-radius:6px;overflow:hidden;border:1px solid var(--line);";
+    wrap.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">
+      <button title="移除" style="position:absolute;top:0;right:0;background:rgba(0,0,0,0.6);color:#fff;border:none;width:18px;height:18px;cursor:pointer;line-height:1;font-size:12px;">×</button>`;
+    wrap.querySelector("button").onclick = () => {
+      pendingImages.splice(i, 1);
+      URL.revokeObjectURL(url);
+      refreshPendingThumbs();
+    };
+    out.appendChild(wrap);
+  }
+}
+function closeUpload() { $("uploadModal").classList.remove("open"); }
+
+function refreshThumbs() {
+  const files = $("upImages").files;
+  const out = $("upThumbs");
+  out.innerHTML = "";
+  for (const f of files) {
+    const url = URL.createObjectURL(f);
+    const img = document.createElement("img");
+    img.src = url;
+    img.title = f.name;
+    img.style.cssText = "width:72px;height:72px;object-fit:cover;border:1px solid var(--line);border-radius:6px;";
+    out.appendChild(img);
+  }
+}
+
+async function refreshSpeakers() {
+  const text = $("upText").value.trim();
+  const hint = $("upParsedHint");
+  const sel = $("upMe");
+  if (!text) { hint.style.display = "none"; sel.innerHTML = '<option value="">(先粘贴聊天记录)</option>'; return; }
+  try {
+    // 用 search 端点验证解析,其实最好有独立解析接口;此处先用一个 trick:让后端解析
+    // 直接调 upload 但 mode=__parse_only 即可,但会触发 LLM;改成本地轻解析
+    parsedSpeakers = localParseSpeakers(text);
+    if (!parsedSpeakers.length) { hint.style.display = "block"; hint.textContent = "(未能识别说话人,请检查格式)"; sel.innerHTML = '<option value="">(未识别)</option>'; return; }
+    hint.style.display = "block";
+    hint.textContent = `识别到说话人: ${parsedSpeakers.join(", ")} — 请选择"我"是谁`;
+    sel.innerHTML = parsedSpeakers.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("") + '<option value="">(跳过,让 AI 自己判断)</option>';
+  } catch (e) {
+    hint.style.display = "block"; hint.textContent = "[解析失败] " + e.message;
+  }
+}
+
+// 本地轻解析:仅用于前端提示,不替代后端
+function localParseSpeakers(text) {
+  const lines = text.split(/\r?\n/);
+  const cnt = {};
+  const pats = [
+    /^\s*\d{4}[-\/]\d{1,2}[-\/]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?\s+([^:\n]{1,30}?)\s*[:：]/,
+    /^\s*\d{1,2}:\d{2}(?::\d{2})?\s+([^:\n]{1,30}?)\s*[:：]/,
+    /^\s*\[\d{1,2}:\d{2}(?::\d{2})?\]\s*([^:\n]{1,30}?)\s*[:：]/,
+  ];
+  for (const line of lines) {
+    for (const p of pats) {
+      const m = line.match(p);
+      if (m) { const name = m[1].trim(); if (name) cnt[name] = (cnt[name] || 0) + 1; break; }
+    }
+  }
+  return Object.entries(cnt).sort((a, b) => b[1] - a[1]).map(([n]) => n);
+}
+
+async function doUpload() {
+  const text = $("upText").value.trim();
+  const files = $("upImages").files;
+  if (!text && !files.length) { alert("请粘贴聊天记录或选择图片"); return; }
+  const me = $("upMe").value;
+  if (text && !me) { if (!confirm("未指定'我是谁',AI 会自己猜。继续?")) return; }
+
+  const fd = new FormData();
+  fd.append("text", text);
+  fd.append("mode", $("upMode").value);
+  fd.append("custom", $("upCustom").value);
+  fd.append("note", $("upNote").value);
+  fd.append("me", me);
+  fd.append("user_id", userId());
+  fd.append("save_to_history", $("upSave").checked ? "true" : "false");
+  for (const f of files) fd.append("images", f);
+
+  closeUpload();
+  const whoTag = me ? `我=${me}` : "未标定身份";
+  const imgTag = files.length ? ` · +${files.length} 图` : "";
+  const previewImages = Array.from(files).map((f) => ({data_uri: URL.createObjectURL(f), ct: f.type, name: f.name || "uploaded"}));
+  appendMsg("user", `[图文分析] ${whoTag} · 模式 ${$("upMode").value}` + imgTag + ($("upNote").value ? " · " + $("upNote").value : ""), previewImages);
+  try {
+    const r = await fetch("/api/upload/chat", { method: "POST", body: fd });
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    const meta = data.parsed_count
+      ? `📊 解析 ${data.parsed_count} 条,参与者: ${data.participants.join(", ")}${data.me ? ` | 我=${data.me} 对方=${data.you}` : ""} · 使用 ${data.images_used} 张图`
+      : `📊 使用 ${data.images_used} 张图分析`;
+    appendMsg("assistant", `${meta}\n\n${data.reply}`);
+    refreshStats();
+  } catch (e) {
+    appendMsg("assistant", "[错误] " + e.message);
+  }
+}
+
+function openSearch() { $("searchModal").classList.add("open"); $("searchKw").focus(); }
+function closeSearch() { $("searchModal").classList.remove("open"); }
+async function doSearch() {
+  const kw = $("searchKw").value.trim();
+  if (!kw) return;
+  try {
+    const r = await api("/api/search", {keyword: kw, user_id: userId()});
+    const out = $("searchResults");
+    if (!r.hits.length) { out.innerHTML = "<div class='empty' style='padding:20px;'>没找到</div>"; return; }
+    out.innerHTML = r.hits.map(h => `
+      <div class="hit">
+        <div class="meta">#${h.id} · ${h.role}</div>
+        <div>${escapeHtml(h.content).slice(0, 240)}</div>
+      </div>
+    `).join("");
+  } catch (e) {
+    $("searchResults").innerHTML = "[错误] " + e.message;
+  }
+}
+
+function openHistory() { $("historyModal").classList.add("open"); loadHistory(); }
+function closeHistory() { $("historyModal").classList.remove("open"); }
+async function loadHistory() {
+  try {
+    const r = await api("/api/history", {user_id: userId(), limit: 100});
+    const out = $("historyList");
+    if (!r.messages.length) { out.innerHTML = "<div class='empty' style='padding:20px;'>暂无历史</div>"; return; }
+    out.innerHTML = r.messages.map(m => `
+      <div class="hit">
+        <div class="meta">${m.role}</div>
+        <div>${escapeHtml(m.content).slice(0, 300)}</div>
+      </div>
+    `).join("");
+  } catch (e) {
+    $("historyModal").innerHTML = "[错误] " + e.message;
+  }
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function refreshStats() {
+  try {
+    const r = await api("/api/history", {user_id: userId(), limit: 1});
+    $("stats").innerHTML = `
+      <div>消息总数:<b>${r.total}</b></div>
+      <div>摘要覆盖:<b>${r.summary_until ? 'id ≤ ' + r.summary_until : '无'}</b></div>
+    `;
+  } catch (e) {
+    $("stats").textContent = "加载失败";
+  }
+}
+
+async function refreshAll() {
+  $("stream").innerHTML = '<div class="empty"><h2>加载中...</h2></div>';
+  await loadHistoryIntoStream();
+  await refreshStats();
+}
+
+async function loadHistoryIntoStream() {
+  try {
+    const r = await api("/api/history", {user_id: userId(), limit: 30});
+    if (!r.messages.length) {
+      $("stream").innerHTML = '<div class="empty"><h2>开始对话</h2><p>直接输入你想说的,或点击左侧"上传聊天记录"做关系分析</p></div>';
+      return;
+    }
+    $("stream").innerHTML = "";
+    for (const m of r.messages) appendMsg(m.role, m.content, m.images || []);
+  } catch (e) {
+    $("stream").innerHTML = "<div class='empty'>[错误] " + e.message + "</div>";
+  }
+}
+
+async function doClear() {
+  if (!confirm("确认清空所有历史?此操作不可恢复")) return;
+  try {
+    await api("/api/clear", {user_id: userId()});
+    $("stream").innerHTML = '<div class="empty"><h2>已清空</h2><p>开始新一段对话</p></div>';
+    refreshStats();
+  } catch (e) {
+    alert("清空失败: " + e.message);
+  }
+}
+
+refreshStats();
+loadHistoryIntoStream();
+</script>
+</body>
+</html>
